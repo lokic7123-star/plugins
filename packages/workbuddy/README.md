@@ -188,6 +188,15 @@ A model response confirms that the selected account can answer. It does
 not, without a matching vendor usage record, prove how many credits that
 request deducted. A usage-read error means the balance is unknown.
 
+The encrypted-desktop result can be reproduced without an account using
+`packages/workbuddy/usage.test.mjs` in an isolated temporary HOME (and
+USERPROFILE on Windows). It covers sign-in, usage and chat against a
+synthetic sealed desktop file, and checks that the file stays unchanged.
+A successful browser authorization alone is not a migration: compare the
+returned identity with the intended desktop account before replacing its
+entry. An already signed-in browser can simply renew another saved account.
+
+
 ## Not here
 
 magpie's built-in WorkBuddy does more than this package:
