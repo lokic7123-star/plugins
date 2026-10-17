@@ -78,3 +78,9 @@ test("Qoder's other codes on a 403 aren't a lapsed sign-in either; 105 and no co
   expect(f("105", "login expired")).toEqual({ status: 401, message: "the sign-in lapsed — sign in again (Qoder said 403: login expired)" })
   expect(_internal.failure(403, "")).toEqual({ status: 401, message: "the sign-in lapsed — sign in again" })
 })
+
+test("a BOM in an SSE error body must not turn a resource limit into expired auth", async () => {
+ const { fetch, sets } = await chat(() => sse({headers:{},body:"\uFEFF"+QUEUED,statusCodeValue:403,statusCode:"FORBIDDEN"}))
+ expect(await busy(await fetch(API_CHAT,ASK))).toEqual(WANT)
+ expect(sets).toEqual([])
+})
