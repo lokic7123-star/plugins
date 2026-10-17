@@ -799,7 +799,17 @@ function failure(status, text) {
   let code = ""
   let queue
   try {
-    const j = JSON.parse(msg)
+    let j = JSON.parse(msg)
+    // #167: an HTTP/message wrapper can hold the actual 10605 body.
+    // Unwrap only that known queue code; a real auth/credit/request code
+    // on the outer body remains authoritative.
+    const outerCode = j?.code == null ? "" : String(j.code)
+    if (["", "401", "403"].includes(outerCode) && typeof j?.message === "string") {
+      try {
+        const inner = JSON.parse(j.message.trim())
+        if (inner && !Array.isArray(inner) && String(inner.code) === QUEUED) j = inner
+      } catch {}
+    }
     code = j?.code == null ? "" : String(j.code)
     if (j?.message) msg = String(j.message)
     // details is a JSON string, or the object itself (gjson reads either)
