@@ -1653,14 +1653,16 @@ const makePlugin = (site) => async ({ client }) => {
       }
       if (listRes.status !== 200) return { outcome: "failed", message: `campaigns: HTTP ${listRes.status}` }
       const now = Date.now()
-      const active = (c) => (!c.startAt || c.startAt * 1000 <= now) && (!c.endAt || c.endAt * 1000 > now)
+      const epoch = (value) => Number(value) > 1e12 ? Number(value) : Number(value) * 1000
+      const window = (c) => Number.isFinite(epoch(c.endAt)) && epoch(c.endAt) > 0 ? { until: new Date(epoch(c.endAt)).toISOString() } : {}
+      const active = (c) => (!c.startAt || epoch(c.startAt) <= now) && (!c.endAt || epoch(c.endAt) > now)
       const campaigns = (Array.isArray(list.campaigns) ? list.campaigns : []).filter((x) => x?.actionType === "CLAIM_BENEFIT")
       const campaign = campaigns.find((x) => x.claimStatus === "CLAIMABLE")
       if (!campaign) {
         const done = campaigns.find((x) => x.claimStatus === "CLAIMED" && active(x))
         if (done) {
           const amount = Number(done.benefit?.amount)
-          return { outcome: "done", ...(Number.isFinite(amount) && amount > 0 ? { credit: amount } : {}) }
+          return { outcome: "done", ...window(done), ...(Number.isFinite(amount) && amount > 0 ? { credit: amount } : {}) }
         }
         return campaigns.length ? { outcome: "failed", message: "campaigns: today's credits aren't offered yet" } : { outcome: "inactive" }
       }
@@ -1677,7 +1679,7 @@ const makePlugin = (site) => async ({ client }) => {
       if (claimRes.status !== 200) return { outcome: "failed", message: `claim: HTTP ${claimRes.status}` }
       if (said === "CLAIMED") {
         const amount = Number(claim?.benefit?.amount ?? claim?.data?.benefit?.amount ?? campaign.benefit?.amount)
-        return { outcome: "claimed", ...(Number.isFinite(amount) && amount > 0 ? { credit: amount } : {}) }
+        return { outcome: "claimed", ...window(campaign), ...(Number.isFinite(amount) && amount > 0 ? { credit: amount } : {}) }
       }
       return { outcome: "failed", message: `claim: ${said || "unknown answer"}` }
     } catch (e) {

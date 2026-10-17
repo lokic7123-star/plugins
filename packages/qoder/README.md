@@ -258,3 +258,5 @@ activity; a live claim was not performed.
 The protocol (endpoints, COSY envelope, body codec and device flow) comes
 from [CLIProxyAPI](https://github.com/ufec/CLIProxyAPI)'s Qoder support, by
 way of magpie. Its MIT license is in `LICENSE-CLIProxyAPI`.
+
+Native check-in results also include optional ISO `until` when the campaign has an end. Hosts can use it to expire a cached completion; seconds and milliseconds are accepted.
