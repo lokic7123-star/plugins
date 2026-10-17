@@ -255,10 +255,10 @@ region. Do not infer another account's permission from its balance.
 
 Qoder code **10605**, including `RESOURCE_LIMIT`, `serviceAvailable` or
 `isQueued` details, is a resource/queue answer. Keep its suggested retry
-delay; repeatedly signing in does not free that queue. A BOM-prefixed
-structured body can currently be misread as a lapsed sign-in; the focused
-fix is tracked in [#185](https://github.com/magpie-community/plugins/pull/185)
-and the broader report is [#167](https://github.com/magpie-community/plugins/issues/167).
+delay; repeatedly signing in does not free that queue. Since **0.2.18**
+([#185](https://github.com/magpie-community/plugins/pull/185)), a 10605 led
+by a BOM or wrapped in an outer message is read as busy too; see
+[#167](https://github.com/magpie-community/plugins/issues/167) for the broader report.
 That parser fix does not remove the provider's limit or prove that every
 live 401 had the same cause. A timeout likewise does not establish an
 empty wallet or an expired login.
