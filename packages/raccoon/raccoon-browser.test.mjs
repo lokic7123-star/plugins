@@ -23,7 +23,7 @@ function callbackURL(flow, code = "synthetic-code") {
   return url
 }
 
-test("browser authorization returns automatically and exchanges the code once", async () => {
+test("browser authorization returns automatically and completes the code exchange", async () => {
   let calls = 0
   fakeAuth(async req => {
     expect(new URL(req.url).pathname).toBe("/api/web/auth/v1/login_with_authorization_code")
@@ -111,4 +111,44 @@ test("manual callback and token sign-in remain available without a listener", as
   expect(flow.method).toBe("code")
   const t=tokens()
   expect(await flow.callback(JSON.stringify(t))).toMatchObject({type:"success",access:t.access_token,refresh:t.refresh_token})
+})
+
+
+test("concurrent replay exchanges the authorization code only once", async () => {
+  let calls = 0, entered
+  const started = new Promise(resolve => { entered = resolve })
+  fakeAuth(async () => {
+    calls++
+    entered()
+    await Bun.sleep(200)
+    return Response.json({code: 0, data: tokens()})
+  })
+  const flow = await _internal.browserSignIn()
+  const url = callbackURL(flow)
+  const first = fetch(url)
+  await started
+  const second = fetch(url)
+  const responses = await Promise.all([first, second])
+  expect((await flow.callback()).type).toBe("success")
+  expect(calls).toBe(1)
+  expect(responses.map(response => response.status)).toEqual([200, 409])
+})
+
+test("invalid authorization URL rejects without leaving a listening server", async () => {
+  const source = `import { _internal } from ${JSON.stringify(new URL("./index.mjs", import.meta.url).href)};
+    try { await _internal.browserSignIn(); process.exitCode = 1 }
+    catch { console.log("invalid-url-rejected") }`
+  const child = Bun.spawn([process.execPath, "--eval", source], {
+    env: {...process.env, RACCOON_MAIN_SITE_URL: "not a URL"},
+    stdout: "pipe", stderr: "pipe",
+  })
+  let timedOut = false
+  const deadline = setTimeout(() => { timedOut = true; child.kill() }, 2000)
+  let exitCode
+  try { exitCode = await child.exited }
+  finally { clearTimeout(deadline) }
+  const output = await new Response(child.stdout).text()
+  expect(output).toContain("invalid-url-rejected")
+  expect(timedOut).toBe(false)
+  expect(exitCode).toBe(0)
 })

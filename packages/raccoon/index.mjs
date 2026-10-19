@@ -741,6 +741,8 @@ async function browserSignIn(timeoutMs = 10 * 60 * 1000) {
   // The current authorize page accepts desktop loopback callbacks only with
   // a 64-character hex state and a 127.0.0.1 /auth/callback URL.
   const state = randomBytes(32).toString("hex")
+  const url = new URL(buildAuthorizeUrl(state))
+  url.searchParams.set("desktop_callback", "loopback")
   let complete, timer, origin, received = false, settled = false
   const done = new Promise((resolve) => { complete = resolve })
   const finish = (result) => {
@@ -790,8 +792,6 @@ async function browserSignIn(timeoutMs = 10 * 60 * 1000) {
     server.listen(0, "127.0.0.1", resolve)
   })
   origin = `127.0.0.1:${server.address().port}`
-  const url = new URL(buildAuthorizeUrl(state))
-  url.searchParams.set("desktop_callback", "loopback")
   url.searchParams.set("redirect", `http://${origin}/auth/callback`)
   timer = setTimeout(() => finish({ type: "failed", error: "商汤小浣熊登录超时，请重新登录" }), timeoutMs)
   timer.unref?.()
